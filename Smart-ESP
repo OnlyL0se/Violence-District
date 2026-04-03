@@ -186,6 +186,7 @@ local function AddESP(Model)
 
             ApplyProp(ESP, ESPConfig[Class.."Repaired"])
         else
+            ESP.FillTransparency = 1
             ESP.OutlineColor = Color3.fromRGB(255 - Progress*2.55, 255, 255 - Progress*2.55)
         end
     end
