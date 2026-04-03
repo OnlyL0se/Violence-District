@@ -139,14 +139,6 @@ local function AddESP(Model)
 
         ApplyProp(ESP, ESPConfig[Class])
     elseif Class == "Generator" then
-
-
-
-
-
-
-
-
         if Model:GetAttribute("RepairProgress") == 100 then
             if CheckProp(ESP, ESPConfig[Class.."Repaired"]) then return end
 
