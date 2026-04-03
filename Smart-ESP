@@ -32,6 +32,20 @@ local ESPConfig = {
     GeneratorRepaired = {
         FillTransparency = 1,
         OutlineTransparency = 1
+    },
+    HookLabel = {
+        Name = "CounterForKiller",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Visible = true,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0.91, 0, 0.18, 0),
+        Size = UDim2.new(0.509, 0, 0.51, 0)
+    },
+    HookImages = {
+        "rbxassetid://120434965879067",
+        "rbxassetid://81511619438196",
+        "rbxassetid://130571419892864"
     }
 }
 
@@ -48,7 +62,8 @@ local function GetClass(Instance)
         if Instance.Name == "Generator" then
             return "Generator"
         elseif Instance:GetAttribute("HookCount") then
-            return Players:GetPlayerFromCharacter(Instance).Team.Name
+            local Team = Players:GetPlayerFromCharacter(Instance).Team
+            return Team and Team.Name
         end
     elseif Instance:IsA("Player") then
         return Instance.Team.Name
@@ -106,6 +121,30 @@ local function CheckBlood(Character)
     return Humanoid.Health ~= 100
 end
 
+local function AddHookLabel(Name, Count)
+    if Count == 0 then return end
+
+    local Frame = meGui.Slasher.Frame
+
+    for _,SurvivorFrame in Frame:GetChildren() do
+        if SurvivorFrame.TextLabel.Text == Name then
+            local Counter = SurvivorFrame.ImageLabel:FindFirstChild("CounterForKiller")
+
+            if not Counter then
+                Counter = Instance.new("ImageLabel")
+                Counter.Parent = SurvivorFrame.ImageLabel
+                Counter.Image = ESPConfig.HookImages[Count]
+
+                ApplyProp(Counter, ESPConfig.HookLabel)
+            else
+                Counter.Image = ESPConfig.HookImages[Count]
+            end
+
+            return
+        end
+    end
+end
+
 local function AddESP(Model)
     local Class = GetClass(Model)
 
@@ -139,20 +178,28 @@ local function AddESP(Model)
 
         ApplyProp(ESP, ESPConfig[Class])
     elseif Class == "Generator" then
-        if Model:GetAttribute("RepairProgress") == 100 or GetClass(me) == "Killer" then
+        local Progress = Model:GetAttribute("RepairProgress")
+
+        if Progress == 100 or GetClass(me) == "Killer" then
             if CheckProp(ESP, ESPConfig[Class.."Repaired"]) then return end
 
             ApplyProp(ESP, ESPConfig[Class.."Repaired"])
         else
-            if CheckProp(ESP, ESPConfig[Class]) then return end
-
-            ApplyProp(ESP, ESPConfig[Class])
+            local Config = ESPConfig[Class]
+            Config["OutlineColor"] = Color3.fromRGB(255 - Progress*2.55, 255, 255 - Progress*2.55)
+            ApplyProp(ESP, Config)
         end
     end
 end
 
 local function SetupCharacter(Character)
     if not Character then return end
+
+    Character:GetAttributeChangedSignal("HookCount"):Connect(function()
+        if GetClass(me) == "Killer" then
+            AddHookLabel(Character.Name, Character:GetAttribute("HookCount"))
+        end
+    end)
 
     Character.AttributeChanged:Connect(function()
         AddESP(Character)
@@ -193,10 +240,15 @@ workspace.Map.DescendantAdded:Connect(function(Instance)
     if GetClass(Instance) == "Generator" then
         me:GetPropertyChangedSignal("Team"):Wait()
 
-        Instance.AttributeChanged:Connect(function()
+        local GenProgress; GenProgress = Instance.AttributeChanged:Connect(function()
             if Instance:GetAttribute("RepairProgress") == 100 then
                 AddESP(Instance)
+
+                GenProgress:Disconnect()
+                GenProgress = nil
             end
+
+            AddESP(Instance)
         end)
 
         AddESP(Instance)
@@ -206,10 +258,15 @@ end)
 
 for _,Instance in workspace.Map:GetDescendants() do
     if GetClass(Instance) == "Generator" then
-        Instance.AttributeChanged:Connect(function()
+        local GenProgress; GenProgress = Instance.AttributeChanged:Connect(function()
             if Instance:GetAttribute("RepairProgress") == 100 then
                 AddESP(Instance)
+
+                GenProgress:Disconnect()
+                GenProgress = nil
             end
+
+            AddESP(Instance)
         end)
 
         AddESP(Instance)
