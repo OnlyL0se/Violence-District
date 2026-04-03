@@ -1,5 +1,3 @@
-print("ESP ENABLED ! ! ! ! ")
-
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local me = Players.LocalPlayer
