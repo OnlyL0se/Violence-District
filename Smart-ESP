@@ -30,8 +30,7 @@ local ESPConfig = {
         OutlineColor = Color3.fromRGB(255,255,255)
     },
     GeneratorRepaired = {
-        FillTransparency = 1,
-        OutlineColor = Color3.fromRGB(50,255,50)
+        OutlineTransparency = 1
     }
 }
 
@@ -138,7 +137,7 @@ local function AddESP(Model)
         if CheckProp(ESP, ESPConfig[Class]) then return end
 
         ApplyProp(ESP, ESPConfig[Class])
-    elseif Class == "Generator" then
+    elseif Class == "Generator" and GetClass(me) ~= "Killer" then
         if Model:GetAttribute("RepairProgress") == 100 then
             if CheckProp(ESP, ESPConfig[Class.."Repaired"]) then return end
 
@@ -190,13 +189,26 @@ for _,Player in Players:GetPlayers() do
 end
 
 workspace.Map.DescendantAdded:Connect(function(Instance)
-    if GetClass(me) ~= "Killer" and GetClass(Instance) == "Generator" then
+    if GetClass(Instance) == "Generator" then
+        Instance.AttributeChanged:Connect(function()
+            if Instance:GetAttribute("RepairProgress") == 100 then
+                AddESP(Instance)
+            end
+        end)
+
         AddESP(Instance)
     end
+
 end)
 
 for _,Instance in workspace.Map:GetDescendants() do
-    if GetClass(me) ~= "Killer" and GetClass(Instance) == "Generator" then
+    if GetClass(Instance) == "Generator" then
+        Instance.AttributeChanged:Connect(function()
+            if Instance:GetAttribute("RepairProgress") == 100 then
+                AddESP(Instance)
+            end
+        end)
+
         AddESP(Instance)
     end
 end
