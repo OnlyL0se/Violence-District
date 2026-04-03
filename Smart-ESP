@@ -1,0 +1,205 @@
+print("ESP ENABLED ! ! ! ! ")
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local me = Players.LocalPlayer
+local meGui = me.PlayerGui
+
+local ESPConfig = {
+    GLOBAL = {
+        Name = "ESP",
+        FillTransparency = 0.8,
+        OutlineTransparency = 0.5
+    },
+    Survivors = {
+        FillColor = Color3.fromRGB(0,170,0),
+        OutlineColor = Color3.fromRGB(0,100,0)
+    },
+    Killer = {
+        FillColor = Color3.fromRGB(170,0,0),
+        OutlineColor = Color3.fromRGB(100,0,0)
+    },
+    Hurted = {
+        FillColor = Color3.fromRGB(0,170,0),
+        OutlineColor = Color3.fromRGB(255,125,0)
+    },
+    Iframes = {
+        FillColor = Color3.fromRGB(0,100,100),
+        OutlineColor = Color3.fromRGB(0,0,255)
+    },
+    Generator = {
+        FillTransparency = 1,
+        OutlineColor = Color3.fromRGB(255,255,255)
+    },
+    GeneratorRepaired = {
+        FillTransparency = 1,
+        OutlineColor = Color3.fromRGB(50,255,50)
+    }
+}
+
+local function TableLen(Table)
+    local I = 0
+    for _ in Table do
+        I += 1
+    end
+    return I
+end
+
+local function GetClass(Instance)
+    if Instance:IsA("Model") then
+        if Instance.Name == "Generator" then
+            return "Generator"
+        elseif Instance:GetAttribute("HookCount") then
+            return Players:GetPlayerFromCharacter(Instance).Team.Name
+        end
+    elseif Instance:IsA("Player") then
+        return Instance.Team.Name
+    end
+
+    return false
+end
+
+local function CheckAttribute(Value)
+    return (Value or Value == false) and true or false
+end
+
+local function TweenAnimation(ESP, PropName, PropValue, Time)
+    if not ESP or not PropName or not PropValue then return end
+    Time = Time or 1
+
+    if ESP:GetAttribute(`Tween_{PropName}`) then
+        ESP:GetAttributeChangedSignal(`Tween_{PropName}`):Wait()
+    end
+
+    ESP:SetAttribute(`Tween_{PropName}`, true)
+    local Tween = TweenService:Create(ESP, TweenInfo.new(Time, Enum.EasingStyle.Linear), {[PropName] = PropValue})
+    Tween:Play()
+
+    Tween.Completed:Once(function()
+        ESP:SetAttribute(`Tween_{PropName}`, false)
+    end)
+end
+
+local function ApplyProp(Part, Props)
+    for PropName, Value in Props do
+        if typeof(Value) == "Color3" then
+            TweenAnimation(Part, PropName, Value)
+        else
+            Part[PropName] = Value
+        end
+    end
+end
+
+local function CheckProp(Part, Props)
+    local I = 0
+    for PropName, Value in Props do
+        if Part:GetAttribute(PropName) == Value then
+            I += 1
+        end
+    end
+    return I == TableLen(Props)
+end
+
+local function CheckBlood(Character)
+    local Humanoid = Character:WaitForChild("Humanoid", 2)
+
+    if not Humanoid then return false end
+
+    return Humanoid.Health ~= 100
+end
+
+local function AddESP(Model)
+    local Class = GetClass(Model)
+
+    if Class == "Spectator" or not Class then return end
+
+    local ESP = Model:FindFirstChild(ESPConfig.GLOBAL.Name)
+
+    if not ESP then
+        ESP = Instance.new("Highlight")
+        ESP.Parent = Model
+
+        ApplyProp(ESP, ESPConfig.GLOBAL)
+    end
+
+    if Class == "Survivors" then
+        if Model:GetAttribute("Iframes") then
+            if CheckProp(ESP, ESPConfig.Iframes) then return end
+
+            ApplyProp(ESP, ESPConfig.Iframes)
+        elseif CheckBlood(Model) then
+            if CheckProp(ESP, ESPConfig.Hurted) then return end
+
+            ApplyProp(ESP, ESPConfig.Hurted)
+        else
+            if CheckProp(ESP, ESPConfig[Class]) then return end
+
+            ApplyProp(ESP, ESPConfig[Class])
+        end
+    elseif Class == "Killer" then
+        if CheckProp(ESP, ESPConfig[Class]) then return end
+
+        ApplyProp(ESP, ESPConfig[Class])
+    elseif Class == "Generator" then
+        print(Class)
+        if Model:GetAttribute("RepairProgress") == 100 then
+            if CheckProp(ESP, ESPConfig[Class.."Repaired"]) then return end
+
+            ApplyProp(ESP, ESPConfig[Class.."Repaired"])
+        else
+            if CheckProp(ESP, ESPConfig[Class]) then return end
+
+            ApplyProp(ESP, ESPConfig[Class])
+        end
+    end
+end
+
+local function SetupCharacter(Character)
+    if not Character then return end
+
+    Character.AttributeChanged:Connect(function()
+        AddESP(Character)
+    end)   
+    AddESP(Character)
+
+    local Humanoid = Character:WaitForChild("Humanoid", 2)
+    local Animator = Humanoid and Humanoid:WaitForChild("Animator", 2)
+
+    if not Animator then return end
+
+    Animator.AnimationPlayed:Connect(function()
+        if CheckBlood(Character) then
+            AddESP(Character)
+        end
+    end)
+end
+
+Players.PlayerAdded:Connect(function(Player)
+    Player.CharacterAdded:Connect(function(Character)
+        SetupCharacter(Character)
+    end)
+
+    SetupCharacter(Player.Character or Player.CharacterAdded:Wait())
+end)
+
+for _,Player in Players:GetPlayers() do
+    if Player == me then continue end
+
+    Player.CharacterAdded:Connect(function(Character)
+        SetupCharacter(Character)
+    end)
+
+    SetupCharacter(Player.Character or Player.CharacterAdded:Wait())
+end
+
+workspace.Map.DescendantAdded:Connect(function(Instance)
+    if GetClass(me) ~= "Killer" and GetClass(Instance) == "Generator" then
+        AddESP(Instance)
+    end
+end)
+
+for _,Instance in workspace.Map:GetDescendants() do
+    if GetClass(me) ~= "Killer" and GetClass(Instance) == "Generator" then
+        AddESP(Instance)
+    end
+end
