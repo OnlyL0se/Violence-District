@@ -62,7 +62,8 @@ local function GetClass(Instance)
         if Instance.Name == "Generator" then
             return "Generator"
         elseif Instance:GetAttribute("HookCount") then
-            local Team = Players:GetPlayerFromCharacter(Instance).Team
+            local Player = Players:GetPlayerFromCharacter(Instance)
+            local Team = Player and Player.Team
             return Team and Team.Name
         end
     elseif Instance:IsA("Player") then
@@ -93,10 +94,10 @@ local function TweenAnimation(ESP, PropName, PropValue, Time)
     end)
 end
 
-local function ApplyProp(Part, Props)
+local function ApplyProp(Part, Props, Time)
     for PropName, Value in Props do
         if typeof(Value) == "Color3" then
-            TweenAnimation(Part, PropName, Value)
+            TweenAnimation(Part, PropName, Value, Time)
         else
             Part[PropName] = Value
         end
@@ -185,9 +186,7 @@ local function AddESP(Model)
 
             ApplyProp(ESP, ESPConfig[Class.."Repaired"])
         else
-            local Config = ESPConfig[Class]
-            Config["OutlineColor"] = Color3.fromRGB(255 - Progress*2.55, 255, 255 - Progress*2.55)
-            ApplyProp(ESP, Config)
+            ESP.OutlineColor = Color3.fromRGB(255 - Progress*2.55, 255, 255 - Progress*2.55)
         end
     end
 end
